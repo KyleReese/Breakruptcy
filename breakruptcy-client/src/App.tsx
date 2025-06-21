@@ -1,41 +1,76 @@
 import { useState, useEffect, useRef } from "react";
 import { TimerDisplay } from "./components/TimerDisplay";
 import { TimerControls } from "./components/TimerControls";
-import type { TimerState } from "./types/timer";
-import { getActiveBank } from "./utils/timer";
+import { TimerConfigComponent } from "./components/TimerConfig";
+import type { TimerState, TimerConfig as TimerConfigType } from "./types/timer";
+import { getActiveBank, isTimerAtInitialValue } from "./utils/timer";
 
 const STORAGE_KEY = "breakrupcy-timer-state";
+const CONFIG_STORAGE_KEY = "breakrupcy-timer-config";
 const SAVE_INTERVAL = 10000; // 10 seconds
-const TICK_INTERVAL = 1000; // 100ms
+const TICK_INTERVAL = 100; // 100ms
 
-const INITIAL_TIMER_STATE: TimerState = {
+const DEFAULT_CONFIG: TimerConfigType = {
+  bank1Duration: 25 * 60 * 1000, // 25 minutes in milliseconds
+  bank2Duration: 5 * 60 * 1000, // 5 minutes in milliseconds
+  bank1Label: "Work",
+  bank2Label: "Break",
+};
+
+const createInitialTimerState = (config: TimerConfigType): TimerState => ({
   bank1: {
-    remaining: 25 * 60 * 1000, // 25 minutes in milliseconds
-    label: "Work",
+    remaining: config.bank1Duration,
+    label: config.bank1Label,
     isActive: true,
   },
   bank2: {
-    remaining: 5 * 60 * 1000, // 5 minutes in milliseconds
-    label: "Break",
+    remaining: config.bank2Duration,
+    label: config.bank2Label,
     isActive: false,
   },
   isPaused: true,
   lastTick: Date.now(),
-};
+  config,
+  isConfigurable: true,
+});
 
 function App() {
+  const [showConfig, setShowConfig] = useState(false);
+
   const [timerState, setTimerState] = useState<TimerState>(() => {
-    // Load from localStorage on init
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
+    // Load config first
+    const savedConfig = localStorage.getItem(CONFIG_STORAGE_KEY);
+    const config = savedConfig ? JSON.parse(savedConfig) : DEFAULT_CONFIG;
+
+    // Load timer state or create initial state
+    const savedState = localStorage.getItem(STORAGE_KEY);
+    if (savedState) {
       try {
-        const parsed = JSON.parse(saved);
-        return { ...parsed, lastTick: Date.now() }; // Reset lastTick on load
+        const parsed = JSON.parse(savedState);
+        // Update config and labels from saved config
+        return {
+          ...parsed,
+          lastTick: Date.now(),
+          config,
+          bank1: { ...parsed.bank1, label: config.bank1Label },
+          bank2: { ...parsed.bank2, label: config.bank2Label },
+          // Determine if configurable based on timer values
+          isConfigurable:
+            parsed.isPaused &&
+            isTimerAtInitialValue(
+              { remaining: parsed.bank1.remaining },
+              config.bank1Duration
+            ) &&
+            isTimerAtInitialValue(
+              { remaining: parsed.bank2.remaining },
+              config.bank2Duration
+            ),
+        };
       } catch {
-        return INITIAL_TIMER_STATE;
+        return createInitialTimerState(config);
       }
     }
-    return INITIAL_TIMER_STATE;
+    return createInitialTimerState(config);
   });
 
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -48,7 +83,8 @@ function App() {
     }
     saveTimeoutRef.current = setTimeout(() => {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    }, 1000); // Debounce saves by 1 second
+      localStorage.setItem(CONFIG_STORAGE_KEY, JSON.stringify(state.config));
+    }, 1000);
   };
 
   // Timer tick logic
@@ -112,7 +148,8 @@ function App() {
     setTimerState((prevState) => ({
       ...prevState,
       isPaused: !prevState.isPaused,
-      lastTick: Date.now(), // Reset tick timestamp
+      isConfigurable: false, // Lock configuration once timer starts
+      lastTick: Date.now(),
     }));
   };
 
@@ -121,15 +158,13 @@ function App() {
       ...prevState,
       bank1: { ...prevState.bank1, isActive: !prevState.bank1.isActive },
       bank2: { ...prevState.bank2, isActive: !prevState.bank2.isActive },
-      lastTick: Date.now(), // Reset tick timestamp
+      lastTick: Date.now(),
     }));
   };
 
   const handleReset = () => {
-    setTimerState({
-      ...INITIAL_TIMER_STATE,
-      lastTick: Date.now(),
-    });
+    const newState = createInitialTimerState(timerState.config);
+    setTimerState(newState);
     localStorage.removeItem(STORAGE_KEY);
   };
 
@@ -137,6 +172,18 @@ function App() {
     if (!timerState[bankKey].isActive && !timerState.isPaused) {
       handleSwitch();
     }
+  };
+
+  const handleConfigSave = (newConfig: TimerConfigType) => {
+    const newState = createInitialTimerState(newConfig);
+    setTimerState(newState);
+    localStorage.setItem(CONFIG_STORAGE_KEY, JSON.stringify(newConfig));
+    localStorage.removeItem(STORAGE_KEY); // Clear old timer state
+    setShowConfig(false);
+  };
+
+  const handleConfigCancel = () => {
+    setShowConfig(false);
   };
 
   return (
@@ -162,6 +209,8 @@ function App() {
         onPlayPause={handlePlayPause}
         onSwitch={handleSwitch}
         onReset={handleReset}
+        isConfigurable={timerState.isConfigurable}
+        onConfigure={() => setShowConfig(true)}
       />
 
       {/* Status indicator */}
@@ -174,6 +223,15 @@ function App() {
                 : timerState.bank2.label
             } Active`}
       </div>
+
+      {/* Configuration Modal */}
+      {showConfig && (
+        <TimerConfigComponent
+          config={timerState.config}
+          onSave={handleConfigSave}
+          onCancel={handleConfigCancel}
+        />
+      )}
     </div>
   );
 }
