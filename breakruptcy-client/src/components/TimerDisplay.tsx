@@ -14,30 +14,39 @@ export const TimerDisplay: React.FC<TimerDisplayProps> = ({
   return (
     <div
       className={`
-        p-8 m-4 border-4 rounded-xl text-center transition-all duration-200 ease-in-out
+        relative p-8 m-2 rounded-3xl text-center transition-all duration-300 ease-in-out transform hover:scale-105
         ${
           bank.isActive
-            ? "border-blue-500 bg-blue-50 cursor-pointer hover:bg-blue-100"
-            : "border-gray-300 bg-gray-50 cursor-pointer hover:bg-gray-100"
+            ? "bg-white/90 backdrop-blur-sm border-2 border-blue-300 shadow-xl shadow-blue-100/50"
+            : "bg-white/60 backdrop-blur-sm border-2 border-gray-200 shadow-lg hover:shadow-xl"
         }
         ${onClick ? "cursor-pointer" : "cursor-default"}
+        min-w-[280px] min-h-[200px] flex flex-col justify-center
       `}
       onClick={onClick}
     >
       <h2
-        className={`mb-4 text-2xl font-semibold ${
-          bank.isActive ? "text-blue-500" : "text-gray-600"
+        className={`mb-6 text-2xl font-semibold ${
+          bank.isActive ? "text-blue-600" : "text-gray-600"
         }`}
       >
         {bank.label}
       </h2>
+
       <div
-        className={`text-5xl font-bold font-mono ${
-          bank.isActive ? "text-blue-500" : "text-gray-600"
+        className={`text-6xl font-bold font-mono leading-none ${
+          bank.isActive ? "text-gray-800" : "text-gray-500"
         }`}
       >
         {formatTime(bank.remaining)}
       </div>
+
+      {/* Bottom accent */}
+      <div
+        className={`mt-6 h-1 w-16 mx-auto rounded-full ${
+          bank.isActive ? "bg-blue-500" : "bg-gray-300"
+        }`}
+      ></div>
     </div>
   );
 };

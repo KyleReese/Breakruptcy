@@ -187,51 +187,70 @@ function App() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-8 font-sans">
-      <header className="text-center mb-8">
-        <h1 className="text-gray-800 text-5xl font-bold mb-2">Breakrupcy</h1>
-        <p className="text-gray-600 text-xl">Chess Timer for Productivity</p>
-      </header>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      <div className="max-w-6xl mx-auto p-8 font-sans">
+        <header className="text-center mb-12">
+          <h1 className="text-gray-800 text-6xl font-bold pb-3 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+            Breakrupcy
+          </h1>
+          <p className="text-gray-600 text-xl font-medium">
+            Chess Timer for Productivity
+          </p>
+        </header>
 
-      <div className="flex justify-center flex-wrap gap-4">
-        <TimerDisplay
-          bank={timerState.bank1}
-          onClick={() => handleBankClick("bank1")}
+        <div className="flex justify-center flex-wrap gap-6 mb-8">
+          <TimerDisplay
+            bank={timerState.bank1}
+            onClick={() => handleBankClick("bank1")}
+          />
+          <TimerDisplay
+            bank={timerState.bank2}
+            onClick={() => handleBankClick("bank2")}
+          />
+        </div>
+
+        <TimerControls
+          isPaused={timerState.isPaused}
+          onPlayPause={handlePlayPause}
+          onSwitch={handleSwitch}
+          onReset={handleReset}
+          isConfigurable={timerState.isConfigurable}
+          onConfigure={() => setShowConfig(true)}
         />
-        <TimerDisplay
-          bank={timerState.bank2}
-          onClick={() => handleBankClick("bank2")}
-        />
+
+        {/* Status indicator */}
+        <div className="text-center mt-6">
+          <div className="inline-flex items-center px-6 py-3 bg-white/60 backdrop-blur-sm rounded-full border border-gray-200 shadow-sm">
+            <div
+              className={`w-3 h-3 rounded-full mr-3 ${
+                timerState.isPaused
+                  ? "bg-gray-400"
+                  : timerState.bank1.isActive
+                  ? "bg-blue-500 animate-pulse"
+                  : "bg-purple-500 animate-pulse"
+              }`}
+            ></div>
+            <span className="text-gray-700 text-lg font-medium">
+              {timerState.isPaused
+                ? "Paused"
+                : `${
+                    timerState.bank1.isActive
+                      ? timerState.bank1.label
+                      : timerState.bank2.label
+                  } Active`}
+            </span>
+          </div>
+        </div>
+
+        {/* Configuration Modal */}
+        {showConfig && (
+          <TimerConfigComponent
+            config={timerState.config}
+            onSave={handleConfigSave}
+            onCancel={handleConfigCancel}
+          />
+        )}
       </div>
-
-      <TimerControls
-        isPaused={timerState.isPaused}
-        onPlayPause={handlePlayPause}
-        onSwitch={handleSwitch}
-        onReset={handleReset}
-        isConfigurable={timerState.isConfigurable}
-        onConfigure={() => setShowConfig(true)}
-      />
-
-      {/* Status indicator */}
-      <div className="text-center mt-4 text-gray-600 text-lg">
-        {timerState.isPaused
-          ? "Paused"
-          : `${
-              timerState.bank1.isActive
-                ? timerState.bank1.label
-                : timerState.bank2.label
-            } Active`}
-      </div>
-
-      {/* Configuration Modal */}
-      {showConfig && (
-        <TimerConfigComponent
-          config={timerState.config}
-          onSave={handleConfigSave}
-          onCancel={handleConfigCancel}
-        />
-      )}
     </div>
   );
 }
